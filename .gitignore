@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+dist/
+build/
+logs/
+data/
+MUJOCO_LOG.TXT
+*debug.txt
+site/public/
+site/resources/
+site/.hugo_build.lock

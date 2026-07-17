@@ -1,0 +1,16 @@
+baseURL = "https://probenet.inaganti.h9m.org/"
+title = "ProbeNet"
+theme = "hugo-coder"
+languageCode = "en"
+enableEmoji = true
+
+[markup]
+[markup.highlight]
+noClasses = false
+[markup.goldmark]
+[markup.goldmark.renderer]
+unsafe = true
+
+[params]
+description = "Vision-informed interactive perception for physics-aware manipulation"
+colorScheme = "auto"
