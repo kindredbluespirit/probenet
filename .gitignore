@@ -1,13 +1,33 @@
+# Python
 __pycache__/
 *.pyc
-.venv/
+*.py[cod]
 *.egg-info/
 dist/
 build/
-logs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Hydra outputs
+outputs/
+multirun/
+
+# Data (never commit datasets)
 data/
-MUJOCO_LOG.TXT
-*debug.txt
+
+# Hugo site output
 site/public/
 site/resources/
 site/.hugo_build.lock
+
+# Logs
+logs/
+MUJOCO_LOG.TXT
+*debug.txt
+
+# OS
+.DS_Store
+Thumbs.db
