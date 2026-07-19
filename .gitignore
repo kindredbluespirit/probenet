@@ -18,6 +18,9 @@ multirun/
 # Data (never commit datasets)
 data/
 
+# Third-party assets (clone on demand)
+third_party/
+
 # Hugo site output
 site/public/
 site/resources/
