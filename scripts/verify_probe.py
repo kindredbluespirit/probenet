@@ -2,18 +2,17 @@
 
 This script loads the MuJoCo environment for both shells, renders a camera
 frame, runs the scripted probe, and prints the extracted signal features.
-The goal is to confirm that the probe signal differs between the two
-visually ambiguous objects.
 """
 
 from pathlib import Path
+
+from PIL import Image
 
 from probenet.env import SO101Env
 from probenet.probe import ProbeRunner, default_probe_config, extract_probe_features
 
 
 def main() -> None:
-    """Run probe verification for both shells and print the results."""
     output_dir = Path("outputs")
     output_dir.mkdir(parents=True, exist_ok=True)
     config = default_probe_config()
@@ -23,12 +22,8 @@ def main() -> None:
         env = SO101Env(object_type=object_type, image_size=(224, 224))
         env.reset(seed=0)
 
-        # Save a render so we can visually confirm the two shells look the same.
         rgb = env.render()
         img_path = output_dir / f"probe_verify_{object_type}.png"
-        # Use torchvision or PIL to save the image.
-        from PIL import Image
-
         Image.fromarray(rgb).save(img_path)
 
         runner = ProbeRunner(env, config)
@@ -49,7 +44,6 @@ def main() -> None:
             print(f"  {name}: {value:.6f}")
         print()
 
-    # Print simple contrast metrics.
     af_a = results["shell_a"]["features"]["af_mean"]
     af_b = results["shell_b"]["features"]["af_mean"]
     ratio = abs(af_b - af_a) / (abs(af_a) + 1e-8)

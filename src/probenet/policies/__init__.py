@@ -1,5 +1,3 @@
-"""Policy modules for ProbeNet."""
+"""Policy modules for ProbeNet — the π₀.₅ baseline lives in openpi."""
 
-from probenet.policies.bc_policy import BCPolicy, ImageEncoder, ProbeNetPolicy, StateEncoder
-
-__all__ = ["BCPolicy", "ImageEncoder", "ProbeNetPolicy", "StateEncoder"]
+__all__: list[str] = []

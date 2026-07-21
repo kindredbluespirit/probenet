@@ -48,3 +48,34 @@ def test_env_probe_signal():
     assert signal["actuator_force"].shape == (env.model.nu,)
     assert signal["qfrc_actuator"].shape == (env.model.nv,)
     env.close()
+
+
+def test_env_lerobot_obs():
+    """LeRobot-compatible observation should have expected keys and types."""
+    env = SO101Env(object_type="shell_a")
+    env.reset(seed=0)
+
+    # Step once so joints settle.
+    env.step(np.zeros(6, dtype=np.float32))
+    obs = env.get_lerobot_obs()
+
+    assert "cam_primary" in obs
+    assert obs["cam_primary"].shape == (224, 224, 3)
+
+    for key in ("shoulder_pan.pos", "shoulder_lift.pos", "elbow_flex.pos",
+                "wrist_flex.pos", "wrist_roll.pos", "gripper.pos"):
+        assert key in obs, f"missing key {key}"
+        assert isinstance(obs[key], float), f"{key} is {type(obs[key])}"
+
+    assert 0.0 <= obs["gripper.pos"] <= 1.0, f"gripper out of range: {obs['gripper.pos']}"
+    env.close()
+
+
+def test_env_pick_place_trajectory():
+    """The pick-and-place trajectory should have the right shape."""
+    env = SO101Env(object_type="shell_a")
+    traj = env.pick_place_trajectory
+    assert traj.ndim == 2
+    assert traj.shape[1] == 6
+    assert traj.shape[0] > 200
+    env.close()

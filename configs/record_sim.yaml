@@ -1,0 +1,19 @@
+# @package _global_
+# Configuration for recording sim demonstrations as LeRobot datasets.
+
+defaults:
+  - so101_env
+  - _self_
+
+dataset:
+  repo_id: "probenet/so101_pick_place"
+  robot_type: "so101_follower"
+  fps: 30
+  task_prompt: "pick up the shell and place it on the table"
+
+recording:
+  num_episodes: 100
+  noise_scale: 0.02
+  seed: 42
+
+output_dir: "data/lerobot"
