@@ -1,0 +1,28 @@
+# Git
+.git
+.gitmodules
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Data
+data/
+outputs/
+wandb/
+
+# Docs
+docs/
+site/
+
+# Tests
+tests/
+
+# CI
+.github/
+
+# OS
+.DS_Store
+Thumbs.db

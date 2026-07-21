@@ -31,6 +31,12 @@ logs/
 MUJOCO_LOG.TXT
 *debug.txt
 
+# Docker
+.docker/
+
+# WandB
+wandb/
+
 # OS
 .DS_Store
 Thumbs.db

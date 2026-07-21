@@ -1,0 +1,58 @@
+# Local dev — trainer + rollout on one machine (no Isaac Sim needed for local)
+#
+# Usage:
+#   podman compose up trainer
+#   podman compose up rollout    # needs GPU + Isaac Sim volumes
+#   podman compose down
+
+services:
+  trainer:
+    build:
+      context: ..
+      target: trainer
+    image: probenet:trainer
+    container_name: probenet-trainer
+    runtime: nvidia
+    environment:
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - HF_HOME=/data/huggingface
+      - HF_TOKEN=${HF_TOKEN:-}
+      - WANDB_API_KEY=${WANDB_API_KEY:-}
+    volumes:
+      - ../data:/data:rw
+      - ../outputs:/workspace/probenet/outputs:rw
+      - ../configs:/workspace/probenet/configs:ro
+    command: ["--config", "configs/trainer.yaml"]
+    profiles: ["trainer"]
+
+  rollout:
+    build:
+      context: ..
+      target: rollout
+    image: probenet:rollout
+    container_name: probenet-rollout
+    runtime: nvidia
+    environment:
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - DISPLAY=${DISPLAY:-}
+      - OMNI_KIT_ACCEPT_EULA=YES
+      - HF_HOME=/data/huggingface
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - ../data:/data:rw
+      - ../outputs:/workspace/probenet/outputs:rw
+      - ../configs:/workspace/probenet/configs:ro
+      - isaac_sim_cache_ov:/root/.cache/ov:rw
+      - isaac_sim_cache_pip:/root/.cache/pip:rw
+      - isaac_sim_assets:/isaac-sim/assets:ro
+    command: ["--config", "configs/rollout.yaml"]
+    profiles: ["rollout"]
+
+volumes:
+  isaac_sim_cache_ov:
+  isaac_sim_cache_pip:
+  isaac_sim_assets:
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOME}/isaacsim_assets
