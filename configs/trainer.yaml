@@ -1,0 +1,30 @@
+# ProbeNet trainer configuration
+# Used by: probenet CLI --mode trainer
+
+hf_model_repo: ""
+hf_dataset_repo: ""
+
+dataset_root: "data/lerobot"
+bc_dataset_root: "data/lerobot"
+
+policy: pi05          # pi05 | gr00t
+exp_name: "probenet_baseline"
+
+batch_size: 64
+num_workers: 4
+num_train_steps: 100000
+save_interval: 5000
+log_interval: 100
+
+lr_peak: 0.00005
+lr_warmup_steps: 10000
+lr_decay_steps: 1000000
+lr_decay_lr: 0.00005
+clip_gradient_norm: 1.0
+
+init_checkpoint: "gs://openpi-assets/checkpoints/pi05_base"
+output_dir: "outputs/checkpoints"
+resume: false
+overwrite: false
+
+wandb_enabled: true

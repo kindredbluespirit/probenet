@@ -1,0 +1,18 @@
+# ProbeNet rollout worker configuration
+# Used by: probenet CLI --mode rollout
+
+hf_model_repo: ""
+hf_dataset_repo: ""
+
+local_ckpt_dir: "outputs/checkpoints"
+local_data_dir: "outputs/eval_runs"
+
+strategy: "scripted_oracle"
+num_episodes: 100
+worker_id: ""
+headless: true
+
+poll_interval: 30
+max_cycles: 0          # 0 = run forever
+
+dataset_repo_id: "probenet/so101_sim"
