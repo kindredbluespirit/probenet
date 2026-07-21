@@ -11,3 +11,5 @@ When creating a doc, follow the YYYY-MM-DD_01_n-a-m-e.md syntax.
 
 The Hugo project page lives in site/. To build: hugo --source site --destination public.
 The Python project uses uv with hatchling, src layout (src/probenet/). Scripts live in scripts/.
+
+Whenever you implement a plan, also create a doc with all the details for future reference.
