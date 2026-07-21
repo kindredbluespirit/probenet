@@ -1,14 +1,23 @@
-"""Scripted probe and signal processing for the SO-101 arm.
+"""Scripted probe and signal processing for the SO-101 arm via Isaac Sim.
 
 The probe executes a fixed squeeze + lift-hold sequence on the object and logs
-actuator forces / joint torques, which serve as the MuJoCo analog of servo
-current readings on the physical robot.
+joint actuator forces, which serve as the sim analog of servo current readings
+on the physical robot.
 """
 
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
+
+JOINT_ORDER = [
+    "shoulder_pan",
+    "shoulder_lift",
+    "elbow_flex",
+    "wrist_flex",
+    "wrist_roll",
+    "gripper",
+]
 
 
 @dataclass
@@ -17,94 +26,64 @@ class ProbePhase:
 
     Args:
         name: Human-readable phase label.
-        duration_steps: Number of simulation steps to hold this phase.
-        target_ctrl: Absolute actuator position targets for the arm (size 6).
-        gripper: Absolute gripper position target. If ``None``, the gripper is
-            left unchanged.
+        duration_steps: Number of steps to hold this phase.
+        target_joints: Absolute joint position targets ``(6,)`` rad.
+        gripper: Absolute gripper position. ``None`` leaves gripper unchanged.
     """
 
     name: str
     duration_steps: int
-    target_ctrl: np.ndarray
+    target_joints: np.ndarray
     gripper: float | None
 
 
 @dataclass
 class ProbeConfig:
-    """Default probe sequence for the SO-101 arm.
+    """Scripted probe sequence for the SO-101 arm.
 
-    The sequence is intentionally simple and open-loop. It can be replaced by
-    a learned or adaptive strategy later.
+    The sequence is intentionally simple and open-loop. It can be
+    replaced by a learned or adaptive strategy later.
     """
 
-    approach_ctrl: np.ndarray
-    squeeze_ctrl: np.ndarray
-    lift_ctrl: np.ndarray
-    hold_steps: int = 100
+    approach_joints: np.ndarray
+    squeeze_joints: np.ndarray
+    lift_joints: np.ndarray
+    approach_steps: int = 200
     squeeze_steps: int = 100
     lift_steps: int = 100
-    approach_steps: int = 200
+    hold_steps: int = 100
 
     def build_phases(self) -> list[ProbePhase]:
-        """Return the default probe phase sequence."""
         return [
-            ProbePhase(
-                "approach",
-                self.approach_steps,
-                self.approach_ctrl,
-                0.0,
-            ),
-            ProbePhase(
-                "squeeze",
-                self.squeeze_steps,
-                self.squeeze_ctrl,
-                0.8,
-            ),
-            ProbePhase(
-                "lift",
-                self.lift_steps,
-                self.lift_ctrl,
-                0.8,
-            ),
-            ProbePhase(
-                "hold",
-                self.hold_steps,
-                self.lift_ctrl,
-                0.8,
-            ),
-            ProbePhase(
-                "release",
-                self.squeeze_steps,
-                self.lift_ctrl,
-                0.0,
-            ),
+            ProbePhase("approach", self.approach_steps, self.approach_joints, 0.0),
+            ProbePhase("squeeze", self.squeeze_steps, self.squeeze_joints, 0.8),
+            ProbePhase("lift", self.lift_steps, self.lift_joints, 0.8),
+            ProbePhase("hold", self.hold_steps, self.lift_joints, 0.8),
+            ProbePhase("release", self.squeeze_steps, self.lift_joints, 0.0),
         ]
 
 
 def default_probe_config() -> ProbeConfig:
     """Return a conservative probe config for the SO-101.
 
-    The joint targets are chosen so the gripper is positioned above the object
-    at the default reset pose (object at x=0.25, z=0.035).
+    Joint targets are chosen so the gripper is positioned above the object
+    at the default reset pose.
     """
-    # Pre-grasp: above object, gripper open.
-    approach_ctrl = np.array([0.0, -0.5, 0.8, 0.8, 1.58, 0.0], dtype=np.float32)
-    # Squeeze: same pose, gripper closed.
-    squeeze_ctrl = np.array([0.0, -0.5, 0.8, 0.8, 1.58, 1.5], dtype=np.float32)
-    # Lift: raise the arm while keeping the gripper over the object.
-    lift_ctrl = np.array([0.0, -0.7, 0.8, 0.9, 1.58, 1.5], dtype=np.float32)
+    approach = np.array([0.0, -0.5, 0.8, 0.8, 1.58, 0.0], dtype=np.float32)
+    squeeze = np.array([0.0, -0.5, 0.8, 0.8, 1.58, 1.5], dtype=np.float32)
+    lift = np.array([0.0, -0.7, 0.8, 0.9, 1.58, 1.5], dtype=np.float32)
     return ProbeConfig(
-        approach_ctrl=approach_ctrl,
-        squeeze_ctrl=squeeze_ctrl,
-        lift_ctrl=lift_ctrl,
+        approach_joints=approach,
+        squeeze_joints=squeeze,
+        lift_joints=lift,
     )
 
 
 class ProbeRunner:
-    """Run a scripted probe sequence in an environment and log the signal.
+    """Run a scripted probe sequence in an Isaac Sim env and log signals.
 
     Args:
-        env: A ``SO101Env`` instance.
+        env: An ``IsaacSO101Env`` instance.
         config: ``ProbeConfig`` describing the probe sequence.
     """
 
@@ -113,46 +92,44 @@ class ProbeRunner:
         self.config = config or default_probe_config()
         self.phases = self.config.build_phases()
 
-    def _ctrl_to_action(self, ctrl: np.ndarray) -> np.ndarray:
-        """Convert absolute actuator positions to the env's normalized action."""
-        ctrl_range = self.env.model.actuator_ctrlrange
-        low, high = ctrl_range[:, 0], ctrl_range[:, 1]
-        return 2.0 * (ctrl - low) / (high - low) - 1.0
-
     def run(self) -> dict[str, Any]:
         """Execute the probe sequence and return the logged signal.
 
         Returns:
-            A dict with keys:
-              - ``phase_names``: list of phase names per timestep.
-              - ``actuator_force``: (T, nu) array of actuator forces.
-              - ``qfrc_actuator``: (T, nv) array of joint torques.
-              - ``ctrl``: (T, nu) array of commanded controls.
-              - ``timestamps``: (T,) array of simulation times.
-              - ``phase_boundaries``: list of (start, end) step indices.
+            Dict with keys:
+              - ``phase_names``: list of phase labels per timestep.
+              - ``actuator_force``: ``(T, 6)`` array of joint forces.
+              - ``joint_pos``: ``(T, 6)`` array of joint positions.
+              - ``ctrl``: ``(T, 6)`` array of commanded joint targets.
+              - ``phase_boundaries``: ``(start, end)`` step indices.
         """
-        actuator_force_log: list[np.ndarray] = []
-        qfrc_actuator_log: list[np.ndarray] = []
+        force_log: list[np.ndarray] = []
+        pos_log: list[np.ndarray] = []
         ctrl_log: list[np.ndarray] = []
-        timestamps: list[float] = []
         phase_names: list[str] = []
         phase_boundaries: list[tuple[int, int]] = []
         step = 0
 
         for phase in self.phases:
             start = step
-            target = phase.target_ctrl.copy()
+            target = phase.target_joints.copy()
             if phase.gripper is not None:
                 target[-1] = phase.gripper
-            action = self._ctrl_to_action(target)
 
             for _ in range(phase.duration_steps):
-                _, _, _, _, _ = self.env.step(action)
+                _, _, _, _ = self.env.step(target)
+
                 signal = self.env.get_probe_signal()
-                actuator_force_log.append(signal["actuator_force"])
-                qfrc_actuator_log.append(signal["qfrc_actuator"])
-                ctrl_log.append(np.array(self.env.data.ctrl, dtype=np.float32))
-                timestamps.append(float(self.env.data.time))
+                force_log.append(signal["actuator_force"])
+                ctrl_log.append(target.copy())
+
+                obs = self.env.get_observation()
+                pos = np.array(
+                    [obs.get(f"{j}.pos", 0.0) for j in JOINT_ORDER],
+                    dtype=np.float32,
+                )
+                pos_log.append(pos)
+
                 phase_names.append(phase.name)
                 step += 1
 
@@ -160,10 +137,9 @@ class ProbeRunner:
 
         return {
             "phase_names": phase_names,
-            "actuator_force": np.stack(actuator_force_log),
-            "qfrc_actuator": np.stack(qfrc_actuator_log),
+            "actuator_force": np.stack(force_log),
+            "joint_pos": np.stack(pos_log),
             "ctrl": np.stack(ctrl_log),
-            "timestamps": np.array(timestamps, dtype=np.float32),
             "phase_boundaries": phase_boundaries,
         }
 
@@ -171,16 +147,11 @@ class ProbeRunner:
 def extract_probe_features(signal: dict[str, Any]) -> dict[str, float]:
     """Extract simple statistics from a probe signal.
 
-    These features are meant to be interpretable and can feed a small MLP
-    physical-parameter estimator.
+    These features feed a small physical-parameter estimator MLP.
     """
-    actuator_force = signal["actuator_force"]
-    qfrc_actuator = signal["qfrc_actuator"]
+    af = signal["actuator_force"]
     return {
-        "af_mean": float(np.mean(actuator_force)),
-        "af_max": float(np.max(actuator_force)),
-        "af_std": float(np.std(actuator_force)),
-        "qfa_mean": float(np.mean(qfrc_actuator)),
-        "qfa_max": float(np.max(qfrc_actuator)),
-        "qfa_std": float(np.std(qfrc_actuator)),
+        "af_mean": float(np.mean(af)),
+        "af_max": float(np.max(af)),
+        "af_std": float(np.std(af)),
     }

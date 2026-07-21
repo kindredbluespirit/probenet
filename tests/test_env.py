@@ -1,81 +1,130 @@
-"""Smoke tests for the SO-101 MuJoCo environment."""
+"""Tests for the IsaacSO101Env and LeRobot adapter."""
+
+import sys
 
 import numpy as np
+import pytest
 
-from probenet.env import SO101Env
+try:
+    import isaacsim  # noqa: F401
 
+    HAS_ISAAC_SIM = True
+except ImportError:
+    HAS_ISAAC_SIM = False
 
-def test_env_loads():
-    """The environment should load and reset without error."""
-    env = SO101Env(object_type="shell_a")
-    obs, info = env.reset(seed=0)
-    assert "image" in obs
-    assert "state" in obs
-    assert obs["image"].shape == (224, 224, 3)
-    assert info["object_type"] == "shell_a"
-    env.close()
+from probenet.env import JOINT_NAMES, IsaacSO101Env, LerobotAdapter, ObjectSpec
+from probenet.env.isaac_env import _pack_joint_dict, _unpack_joint_dict
 
 
-def test_env_step():
-    """The environment should accept a normalized action and step."""
-    env = SO101Env(object_type="shell_a")
-    env.reset(seed=0)
-    action = np.zeros(env.action_space.shape, dtype=np.float32)
-    obs, reward, terminated, truncated, info = env.step(action)
-    assert obs["image"].shape == (224, 224, 3)
-    assert not terminated
-    assert not truncated
-    assert info["object_type"] == "shell_a"
-    env.close()
+class DummyLeIsaacEnv:
+    """Minimal stub to test IsaacSO101Env without Isaac Sim."""
+
+    def __init__(self):
+        self.device = "cpu"
+        self.num_envs = 1
+        self._step_count = 0
+        self.scene = {}
+
+    def reset(self):
+        self._step_count = 0
+        obs = self._make_obs()
+        return obs, {}
+
+    def step(self, action):
+        self._step_count += 1
+        obs = self._make_obs()
+        done = self._step_count >= 500
+        return obs, 0.0, done, False, {}
+
+    def _get_observations(self):
+        return self._make_obs()
+
+    def _make_obs(self):
+        return {
+            "policy": {
+                "joint_pos": np.zeros((1, 6), dtype=np.float32),
+                "joint_vel": np.zeros((1, 6), dtype=np.float32),
+                "front": np.zeros((1, 480, 640, 3), dtype=np.uint8),
+                "wrist": np.zeros((1, 480, 640, 3), dtype=np.uint8),
+            }
+        }
+
+    def close(self):
+        pass
+
+    def __getattr__(self, name):
+        def _noop(*args, **kwargs):
+            return None
+
+        return _noop
 
 
-def test_env_object_types():
-    """Both shell types should be loadable."""
-    for object_type in ("shell_a", "shell_b"):
-        env = SO101Env(object_type=object_type)
-        obs, info = env.reset(seed=0)
-        assert info["object_type"] == object_type
-        env.close()
+@pytest.fixture
+def dummy_env():
+    return IsaacSO101Env(DummyLeIsaacEnv())
 
 
-def test_env_probe_signal():
-    """The probe signal should have the expected actuator keys."""
-    env = SO101Env(object_type="shell_a")
-    env.reset(seed=0)
-    signal = env.get_probe_signal()
-    assert "actuator_force" in signal
-    assert "qfrc_actuator" in signal
-    assert signal["actuator_force"].shape == (env.model.nu,)
-    assert signal["qfrc_actuator"].shape == (env.model.nv,)
-    env.close()
+class TestJointPacking:
+    def test_pack_joint_dict(self):
+        values = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], dtype=np.float32)
+        result = _pack_joint_dict("pos", values)
+        assert result["shoulder_pan.pos"] == 1.0
+        assert result["shoulder_lift.pos"] == 2.0
+        assert result["gripper.pos"] == 6.0
+        assert len(result) == 6
+
+    def test_unpack_joint_dict(self):
+        action = {
+            "shoulder_pan.pos": 1.0,
+            "shoulder_lift.pos": 2.0,
+            "elbow_flex.pos": 3.0,
+            "wrist_flex.pos": 4.0,
+            "wrist_roll.pos": 5.0,
+            "gripper.pos": 6.0,
+        }
+        result = _unpack_joint_dict(action)
+        np.testing.assert_array_equal(result, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
 
 
-def test_env_lerobot_obs():
-    """LeRobot-compatible observation should have expected keys and types."""
-    env = SO101Env(object_type="shell_a")
-    env.reset(seed=0)
+class TestIsaacSO101Env:
+    def test_reset(self, dummy_env):
+        obs = dummy_env.reset()
+        assert "shoulder_pan.pos" in obs or isinstance(obs, np.ndarray)
 
-    # Step once so joints settle.
-    env.step(np.zeros(6, dtype=np.float32))
-    obs = env.get_lerobot_obs()
+    def test_step(self, dummy_env):
+        dummy_env.reset()
+        obs, reward, done, info = dummy_env.step(np.zeros(6, dtype=np.float64))
+        assert isinstance(obs, dict) or isinstance(obs, np.ndarray)
+        assert isinstance(reward, float)
+        assert isinstance(done, bool)
 
-    assert "cam_primary" in obs
-    assert obs["cam_primary"].shape == (224, 224, 3)
+    def test_lerobot_adapter(self, dummy_env):
+        dummy_env.reset()
+        adapter = LerobotAdapter(dummy_env)
+        obs = adapter.get_observation()
+        assert isinstance(obs, dict)
 
-    for key in ("shoulder_pan.pos", "shoulder_lift.pos", "elbow_flex.pos",
-                "wrist_flex.pos", "wrist_roll.pos", "gripper.pos"):
-        assert key in obs, f"missing key {key}"
-        assert isinstance(obs[key], float), f"{key} is {type(obs[key])}"
+        adapter.send_action({
+            "shoulder_pan.pos": 0.0,
+            "shoulder_lift.pos": 0.0,
+            "elbow_flex.pos": 0.0,
+            "wrist_flex.pos": 0.0,
+            "wrist_roll.pos": 0.0,
+            "gripper.pos": 0.0,
+        })
 
-    assert 0.0 <= obs["gripper.pos"] <= 1.0, f"gripper out of range: {obs['gripper.pos']}"
-    env.close()
+    def test_joint_names(self):
+        assert len(JOINT_NAMES) == 6
+        assert JOINT_NAMES[0] == "shoulder_pan"
+        assert JOINT_NAMES[-1] == "gripper"
+
+    def test_object_spec(self):
+        spec = ObjectSpec(name="test", usd_path="test.usd", mass=0.5)
+        assert spec.name == "test"
+        assert spec.mass == 0.5
 
 
-def test_env_pick_place_trajectory():
-    """The pick-and-place trajectory should have the right shape."""
-    env = SO101Env(object_type="shell_a")
-    traj = env.pick_place_trajectory
-    assert traj.ndim == 2
-    assert traj.shape[1] == 6
-    assert traj.shape[0] > 200
-    env.close()
+@pytest.mark.skipif(not HAS_ISAAC_SIM, reason="Isaac Sim not installed")
+class TestIsaacSO101EnvLive:
+    def test_live_env_requires_isaac_sim(self):
+        pytest.skip("Live Isaac Sim tests not yet implemented (Phase 2)")
