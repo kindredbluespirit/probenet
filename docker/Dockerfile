@@ -15,17 +15,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
+ENV UV_PYTHON_PREFERENCE=only-managed
 
 RUN apt-get update -qq && apt-get install -y -qq \
-    python3.12 python3.12-dev python3.12-venv \
     curl git git-lfs build-essential cmake \
     libgl1-mesa-dev libglfw3 libglfw3-dev \
-    ffmpeg libxinerama-dev libxcursor1 libxrandr2 \
-    > /dev/null && \
+    ffmpeg libxinerama-dev libxcursor1 libxrandr2 && \
     rm -rf /var/lib/apt/lists/*
 
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1 --force && \
-    curl -LsSf https://astral.sh/uv/install.sh | sh
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ENV PATH="/root/.local/bin:$PATH"
 WORKDIR /workspace/probenet
@@ -34,9 +32,7 @@ WORKDIR /workspace/probenet
 
 FROM base AS trainer
 
-COPY backends/openpi/ /workspace/probenet/backends/openpi/
-COPY pyproject.toml uv.lock ./
-COPY src/ ./src/
+COPY . .
 
 RUN uv sync --frozen --no-dev
 RUN uv run python -c "import openpi; import probenet"
@@ -52,8 +48,7 @@ RUN apt-get update -qq && apt-get install -y -qq \
     > /dev/null && \
     rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml uv.lock ./
-COPY src/ ./src/
+COPY . .
 
 RUN uv sync --frozen --no-dev && \
     uv pip install --upgrade torch==2.11.0 --index-url https://download.pytorch.org/whl/cu128 && \
