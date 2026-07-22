@@ -9,7 +9,7 @@
 
 # ── Base ────────────────────────────────────────────────────────────────────
 
-FROM nvidia/cuda:12.6.0-cudnn-devel-ubuntu22.04 AS base
+FROM nvidia/cuda:12.6.0-cudnn-devel-ubuntu24.04 AS base
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
