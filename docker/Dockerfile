@@ -54,7 +54,6 @@ RUN uv sync --frozen --no-dev && \
     uv pip install --upgrade torch==2.11.0 --index-url https://download.pytorch.org/whl/cu128 && \
     uv pip install "isaacsim[all,extscache]==6.0.1.0" --extra-index-url https://pypi.nvidia.com --index-strategy unsafe-best-match --prerelease=allow
 
-RUN uv run python -c "import isaacsim; import probenet"
-
 ENV OMNI_KIT_ACCEPT_EULA=YES
+RUN uv run python -c "import probenet"
 ENTRYPOINT ["uv", "run", "python", "-m", "probenet.cli", "--mode", "rollout"]
