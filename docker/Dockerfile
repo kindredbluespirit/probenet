@@ -24,8 +24,7 @@ RUN apt-get update -qq && apt-get install -y -qq \
     > /dev/null && \
     rm -rf /var/lib/apt/lists/*
 
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1 && \
-    python -m ensurepip --upgrade && \
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1 --force && \
     curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ENV PATH="/root/.local/bin:$PATH"

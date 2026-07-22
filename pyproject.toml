@@ -1,6 +1,6 @@
 [project]
 name = "probenet"
-version = "0.2.2"
+version = "0.2.3"
 description = "Vision-informed interactive perception for physics-aware manipulation"
 readme = "README.md"
 requires-python = ">=3.12"
