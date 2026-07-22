@@ -103,8 +103,12 @@ Triggered on:
 Uses a matrix build (`trainer`, `rollout`) with `docker/build-push-action@v6`.
 Images are published to `ghcr.io/kindredbluespirit/probenet`.
 
-Cache is read-only (`cache-from: type=gha`) — the `cache-to` line was removed
-because the default `docker` driver doesn't support cache export.
+Build caching uses GHA cache with `setup-buildx-action@v3` to provide the
+BuildKit `docker-container` driver (required for `cache-to` export).
+Cache is scoped per matrix target (`scope=${{ matrix.target }}`) to avoid
+trainer/rollout collisions. The Dockerfile uses a `deps` intermediate stage
+that copies only dependency files before running `uv sync`, so source-only
+changes only rebuild the final fast `uv pip install --no-deps -e .` layer.
 
 Submodules are checked out recursively since `backends/openpi` is required.
 

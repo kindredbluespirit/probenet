@@ -6,6 +6,10 @@
 #
 # Trainer: openpi + probenet, torch 2.7.1, JAX, flax (~10 GB)
 # Rollout: probenet + Isaac Sim pip, torch 2.11.0 (~30 GB)
+#
+# Caching: dependency files are copied before source so the expensive
+# uv sync + pip install layer is only invalidated when deps change.
+# Source-only changes rebuild only the final fast layer.
 
 # ── Base ────────────────────────────────────────────────────────────────────
 
@@ -28,31 +32,40 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
 WORKDIR /workspace/probenet
 
-# ── Trainer ─────────────────────────────────────────────────────────────────
+# ── Deps (cached unless pyproject/uv.lock/backends change) ───────────────────
 
-FROM base AS trainer
+FROM base AS deps
 
-COPY . .
+COPY pyproject.toml uv.lock .python-version README.md ./
+COPY backends/ backends/
 
 RUN uv sync --frozen --no-dev
+
+# ── Trainer ─────────────────────────────────────────────────────────────────
+
+FROM deps AS trainer
+
+COPY . .
+RUN uv sync --frozen --no-dev
+
 RUN uv run python -c "import openpi; import probenet"
 
 ENTRYPOINT ["uv", "run", "python", "-m", "probenet.cli", "--mode", "trainer"]
 
 # ── Rollout ─────────────────────────────────────────────────────────────────
 
-FROM base AS rollout
+FROM deps AS rollout
 
 RUN apt-get update -qq && apt-get install -y -qq \
     libxi-dev libglew-dev xorg-dev \
     > /dev/null && \
     rm -rf /var/lib/apt/lists/*
 
-COPY . .
-
-RUN uv sync --frozen --no-dev && \
-    uv pip install --upgrade torch==2.11.0 --index-url https://download.pytorch.org/whl/cu128 && \
+RUN uv pip install --upgrade torch==2.11.0 --index-url https://download.pytorch.org/whl/cu128 && \
     uv pip install "isaacsim[all,extscache]==6.0.1.0" --extra-index-url https://pypi.nvidia.com --index-strategy unsafe-best-match --prerelease=allow
+
+COPY . .
+RUN uv pip install --no-deps -e .
 
 ENV OMNI_KIT_ACCEPT_EULA=YES
 RUN uv run python -c "import probenet"
