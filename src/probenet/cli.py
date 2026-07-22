@@ -28,6 +28,7 @@ def main() -> None:
     parser.add_argument("--exp-name", type=str, default="probenet")
     parser.add_argument("--num-episodes", type=int, default=100)
     parser.add_argument("--headless", action="store_true", default=True)
+    parser.add_argument("--probenet", action="store_true", help="Enable ProbeNet physical property conditioning")
     args = parser.parse_args()
 
     if args.mode == "trainer":
@@ -45,6 +46,7 @@ def _run_trainer(args: argparse.Namespace) -> None:
     config = TrainingConfig(
         exp_name=args.exp_name,
         policy=args.policy,
+        probenet_enabled=args.probenet,
     )
     trainer = Trainer(config)
     trainer.run()

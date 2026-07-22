@@ -47,6 +47,13 @@ class TrainingConfig:
     resume: bool = False
     overwrite: bool = False
 
+    # ProbeNet conditioning
+    probenet_enabled: bool = False
+    probe_mode_dropout: float = 0.1
+    property_dropout: float = 0.25
+    aggressiveness_dropout: float = 0.15
+    language_dropout: float = 0.05
+
     # Logging
     exp_name: str = "probenet_baseline"
     wandb_enabled: bool = True

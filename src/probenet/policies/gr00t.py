@@ -74,3 +74,35 @@ def write_modality_config(output_path: str) -> None:
         f.write("modality = ")
         json.dump(SO101_MODALITY_CONFIG, f, indent=2)
         f.write("\n")
+
+
+# ── ProbeNet GR00T configuration ──────────────────────────────────────────────
+
+
+@dataclass
+class Gr00tProbeNetConfig:
+    """ProbeNet-specific GR00T fine-tuning configuration.
+
+    Adds physical property conditioning to GR00T training pipeline.
+    Properties are injected as text tokens into the task prompt.
+    """
+
+    name: str = "gr00t_so101_probenet"
+
+    base_model_path: str = "nvidia/GR00T-N1.7-3B"
+    dataset_path: str = ""
+    embodiment_tag: str = "SO101"
+
+    num_gpus: int = 1
+    output_dir: str = "/tmp/gr00t_finetune"
+    max_steps: int = 5_000
+    global_batch_size: int = 32
+
+    # ProbeNet conditioning
+    probenet_enabled: bool = True
+    probe_mode_dropout: float = 0.1
+    property_dropout: float = 0.25
+    aggressiveness_dropout: float = 0.15
+    language_dropout: float = 0.05
+
+    wandb_enabled: bool = True

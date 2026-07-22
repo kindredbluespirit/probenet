@@ -1,4 +1,4 @@
-"""π₀.₅ SO-101 policy — data transforms and training config.
+"""π₀.₅ SO-101 policy — data transforms, training configs, ProbeNet variant.
 
 Adapts LeRobot SO-101 observations and actions to the π₀.₅ model input / output
 space via ``openpi.transforms.DataTransformFn`` subclasses.
@@ -9,6 +9,7 @@ Reference: Maelic/openpi-SO100 ``so100_policy.py``.
 from __future__ import annotations
 
 import dataclasses
+from dataclasses import dataclass, field
 
 import einops
 import numpy as np
@@ -85,3 +86,55 @@ class So101Outputs(transforms.DataTransformFn):
     def __call__(self, data: dict) -> dict:
         actions = np.asarray(data["actions"])
         return {"actions": actions[:, :ACTION_DIM]}
+
+
+# ── ProbeNet π₀.₅ configuration ──────────────────────────────────────────────
+
+
+@dataclass
+class Pi05ProbeNetConfig:
+    """ProbeNet-specific π₀.₅ fine-tuning configuration.
+
+    This maps to openpi's ``TrainConfig`` entries but adds ProbeNet
+    conditioning parameters. The trainer uses this to construct the
+    openpi training pipeline and condition the data loader with
+    property tokens.
+    """
+
+    name: str = "pi05_so101_probenet"
+
+    # base π₀.₅ model
+    init_checkpoint: str = "gs://openpi-assets/checkpoints/pi05_base"
+    pi05: bool = True
+    action_horizon: int = 50
+    action_dim: int = 32  # π₀.₅ padded dim
+
+    # data
+    repo_id: str = ""
+    asset_id: str = "so101"
+    prompt_from_task: bool = True
+
+    # training
+    batch_size: int = 64
+    lr_peak: float = 5e-5
+    lr_warmup_steps: int = 10_000
+    lr_decay_steps: int = 1_000_000
+    lr_decay_lr: float = 5e-5
+    clip_gradient_norm: float = 1.0
+    num_train_steps: int = 100_000
+    ema_decay: float | None = 0.999
+
+    # LoRA fine-tuning
+    use_lora: bool = True
+
+    # ProbeNet conditioning
+    probenet_enabled: bool = True
+    probe_mode_dropout: float = 0.1
+    property_dropout: float = 0.25
+    aggressiveness_dropout: float = 0.15
+    language_dropout: float = 0.05
+
+    # FSDP (multi-GPU)
+    fsdp_devices: int = 0
+
+    wandb_enabled: bool = True
