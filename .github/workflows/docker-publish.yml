@@ -2,9 +2,6 @@
 name: docker-publish
 
 on:
-  push:
-    branches: [main]
-    tags: ["v*"]
   workflow_dispatch:
 
 env:
@@ -44,7 +41,11 @@ jobs:
             type=sha,prefix=${{ matrix.target }}-,format=short
 
       - name: Free up disk space
-        run: docker system prune -af --volumes 2>/dev/null || true
+        run: |
+          docker system prune -af --volumes 2>/dev/null || true
+          docker buildx prune -af 2>/dev/null || true
+          rm -rf /home/runner/.cache/uv /home/runner/.cache/pip 2>/dev/null || true
+          df -h / /mnt /home 2>/dev/null || true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -58,5 +59,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.target }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.target }}
+          # Use versioned scope to avoid stale cache from previous iterations
+          cache-from: type=gha,scope=v2-${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=v2-${{ matrix.target }}
