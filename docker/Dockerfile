@@ -60,7 +60,7 @@ RUN apt-get update -qq && apt-get install -y -qq \
     rm -rf /var/lib/apt/lists/*
 
 RUN uv pip install pip && \
-    pip install "isaacsim[all,extscache]==5.1.0.0" \
+    .venv/bin/pip install "isaacsim[all,extscache]==5.1.0.0" \
     --extra-index-url https://pypi.nvidia.com
 
 COPY . .
