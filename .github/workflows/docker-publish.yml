@@ -43,6 +43,9 @@ jobs:
             type=ref,event=tag,suffix=-${{ matrix.target }}
             type=sha,prefix=${{ matrix.target }}-,format=short
 
+      - name: Free up disk space
+        run: docker system prune -af --volumes 2>/dev/null || true
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
