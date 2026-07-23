@@ -20,7 +20,6 @@ and simplifies the Dockerfile considerably.
 |---|---|---|
 | `isaacsim==6.0.1.0` → `isaacsim==5.1.0.0` | 62 | Compatible with torch 2.7.x |
 | Removed `torch==2.11.0` upgrade line | — | No longer needed |
-| Switched to `pip install` for isaacsim | 62-64 | uv's strict resolver rejects Windows-only deps (`pywin32`) and can't build `isaacsim-replicator` on Linux; `pip` is more lenient |
 | Rollout `uv pip install --no-deps -e .` → `uv sync --frozen --no-dev` | 67 | Lockfile is now accurate for the whole env |
 | Rollout `.venv/bin/python` → `uv run python` | 70 | No implicit sync conflict |
 | Trainer consolidated sync + import test → single `uv run` | 49 | Cleaner, fewer layers |

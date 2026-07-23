@@ -13,3 +13,5 @@ The Hugo project page lives in site/. To build: hugo --source site --destination
 The Python project uses uv with hatchling, src layout (src/probenet/). Scripts live in scripts/.
 
 Whenever you implement a plan, also create a doc with all the details for future reference.
+
+Do not commit on your own. Only make changes where applicable.

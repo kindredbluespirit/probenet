@@ -5,10 +5,16 @@
 #   podman build --target rollout -t probenet:rollout .
 #
 # Trainer: openpi + probenet, torch 2.7.1, JAX, flax (~10 GB)
-# Rollout: probenet + Isaac Sim pip 5.1.0, torch 2.7.1 (~30 GB)
+# Rollout: probenet + Isaac Sim 6.0.1, torch 2.11.0 (~30 GB)
+#
+# Rollout uses two virtual environments:
+#   .venv          — openpi policy server (torch 2.7.1 from lockfile)
+#   .venv-isaac    — Isaac Sim rollout worker (torch 2.11.0)
+# The policy server and Isaac Sim worker run as separate processes
+# communicating over WebSocket, so there's no torch version conflict.
 #
 # Caching: dependency files are copied before source so the expensive
-# uv sync + pip install layer is only invalidated when deps change.
+# uv sync layers are only invalidated when deps change.
 # Source-only changes rebuild only the final fast layer.
 
 # ── Base ────────────────────────────────────────────────────────────────────
@@ -59,13 +65,20 @@ RUN apt-get update -qq && apt-get install -y -qq \
     > /dev/null && \
     rm -rf /var/lib/apt/lists/*
 
-RUN uv pip install pip && \
-    .venv/bin/pip install "isaacsim[all,extscache]==5.1.0.0" \
-    --extra-index-url https://pypi.nvidia.com
+# Isaac Sim isolation venv (torch 2.11.0 required by 6.0.1)
+RUN uv venv .venv-isaac && \
+    uv pip install --python .venv-isaac --upgrade torch==2.11.0 \
+    --index-url https://download.pytorch.org/whl/cu128 && \
+    uv pip install --python .venv-isaac \
+    "isaacsim[all,extscache]==6.0.1.0" \
+    --extra-index-url https://pypi.nvidia.com \
+    --index-strategy unsafe-best-match --prerelease=allow
 
 COPY . .
-RUN uv sync --frozen --no-dev
+RUN uv pip install --no-deps -e . && \
+    uv pip install --python .venv-isaac --no-deps -e .
 
 ENV OMNI_KIT_ACCEPT_EULA=YES
-RUN uv run python -c "import probenet"
+RUN .venv-isaac/bin/python -c "import probenet"
+
 ENTRYPOINT ["uv", "run", "python", "-m", "probenet.cli", "--mode", "rollout"]
