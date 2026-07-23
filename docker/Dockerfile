@@ -59,11 +59,9 @@ RUN apt-get update -qq && apt-get install -y -qq \
     > /dev/null && \
     rm -rf /var/lib/apt/lists/*
 
-RUN echo 'pywin32==306; sys_platform == "win32"' > /tmp/override.txt && \
-    uv pip install "isaacsim[all,extscache]==5.1.0.0" \
-    --extra-index-url https://pypi.nvidia.com \
-    --index-strategy unsafe-best-match --prerelease=allow \
-    --override /tmp/override.txt
+RUN uv pip install pip && \
+    pip install "isaacsim[all,extscache]==5.1.0.0" \
+    --extra-index-url https://pypi.nvidia.com
 
 COPY . .
 RUN uv sync --frozen --no-dev
