@@ -5,7 +5,7 @@
 #   podman build --target rollout -t probenet:rollout .
 #
 # Trainer: openpi + probenet, torch 2.7.1, JAX, flax (~10 GB)
-# Rollout: probenet + Isaac Sim pip, torch 2.11.0 (~30 GB)
+# Rollout: probenet + Isaac Sim pip 5.1.0, torch 2.7.1 (~30 GB)
 #
 # Caching: dependency files are copied before source so the expensive
 # uv sync + pip install layer is only invalidated when deps change.
@@ -46,8 +46,6 @@ RUN uv sync --frozen --no-dev
 FROM deps AS trainer
 
 COPY . .
-RUN uv sync --frozen --no-dev
-
 RUN uv run python -c "import openpi; import probenet"
 
 ENTRYPOINT ["uv", "run", "python", "-m", "probenet.cli", "--mode", "trainer"]
@@ -61,11 +59,12 @@ RUN apt-get update -qq && apt-get install -y -qq \
     > /dev/null && \
     rm -rf /var/lib/apt/lists/*
 
-RUN uv pip install --upgrade torch==2.11.0 --index-url https://download.pytorch.org/whl/cu128 && \
-    uv pip install "isaacsim[all,extscache]==6.0.1.0" --extra-index-url https://pypi.nvidia.com --index-strategy unsafe-best-match --prerelease=allow
+RUN uv pip install "isaacsim[all,extscache]==5.1.0.0" \
+    --extra-index-url https://pypi.nvidia.com \
+    --index-strategy unsafe-best-match --prerelease=allow
 
 COPY . .
-RUN uv pip install --no-deps -e .
+RUN uv sync --frozen --no-dev
 
 ENV OMNI_KIT_ACCEPT_EULA=YES
 RUN uv run python -c "import probenet"
