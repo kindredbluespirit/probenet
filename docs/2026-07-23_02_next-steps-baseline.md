@@ -103,7 +103,7 @@ This calls openpi's JAX training loop. Checkpoints land at
 
 ### C1. Start inference server
 ```bash
-cd inference/openpi
+cd policies/openpi
 uv sync
 uv run python serve.py \
   --checkpoint-dir ../../outputs/checkpoints/pi05_so101/baseline_v1/50000 \

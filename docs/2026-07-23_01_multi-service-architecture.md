@@ -23,7 +23,7 @@ probenet/
 │   ├── train.py                # Training orchestrator (policy-agnostic)
 │   └── rollout.py              # Episode loop orchestrator (policy + data-gen agnostic)
 │
-├── inference/                  # Policy inference servers
+├── policies/                  # Policy inference servers
 │   ├── openpi/                 #   π₀.₅ server (WebSocket)
 │   │   ├── pyproject.toml      #   jax, flax, openpi (editable from backends/)
 │   │   └── serve.py            #   loads checkpoint, serves WebSocket
@@ -53,8 +53,8 @@ probenet/
 | # | Directory | `uv sync` | Purpose | Key dependencies |
 |---|-----------|-----------|---------|-----------------|
 | 1 | `probenet/` (root) | `uv sync` | Orchestrator + training | websockets, numpy, hf-hub, pyyaml |
-| 2 | `inference/openpi/` | `cd inference/openpi && uv sync` | π₀.₅ inference | jax, flax, openpi, orbax |
-| 3 | `inference/gr00t/` | `cd inference/gr00t && uv sync` | GR00T inference | torch, gr00t, pyzmq |
+| 2 | `policies/openpi/` | `cd policies/openpi && uv sync` | π₀.₅ inference | jax, flax, openpi, orbax |
+| 3 | `policies/gr00t/` | `cd policies/gr00t && uv sync` | GR00T inference | torch, gr00t, pyzmq |
 | 4 | `episode_gen/sim/` | `cd episode_gen/sim && uv sync` | Isaac Sim data gen | isaacsim, isaaclab, lerobot |
 | 5 | `episode_gen/so101/` | `cd episode_gen/so101 && uv sync` | Real robot data gen | lerobot, pyserial, pyrealsense2 |
 
@@ -99,8 +99,8 @@ class PolicyClient:
     """Abstract inference client."""
     def infer(self, obs: dict) -> dict: ...
 
-class WebSocketPolicyClient(PolicyClient):   # → inference/openpi/
-class ZMQPolicyClient(PolicyClient):          # → inference/gr00t/
+class WebSocketPolicyClient(PolicyClient):   # → policies/openpi/
+class ZMQPolicyClient(PolicyClient):          # → policies/gr00t/
 
 class DataGenClient:
     """Abstract data generator client."""
@@ -145,7 +145,7 @@ while episodes_collected < target:
 - HF Hub sync (upload/download datasets + checkpoints)
 - Training pipeline (loads datasets from disk, trains policy)
 
-### `inference/` owns
+### `policies/` owns
 - Loading model checkpoints
 - Running model inference (obs → actions)
 - Returning actions over wire protocol
@@ -161,20 +161,20 @@ while episodes_collected < target:
 
 ### Local RTX 3060 (real hardware)
 ```
-probenet (orchestrator)  →  inference/openpi (model, GPU)
+probenet (orchestrator)  →  policies/openpi (model, GPU)
                          →  episode_gen/so101 (real robot, leader arms)
 ```
 
 ### Cloud A10/A100 (Isaac Sim)
 ```
-probenet (orchestrator)  →  inference/openpi (model, GPU)
+probenet (orchestrator)  →  policies/openpi (model, GPU)
                          →  episode_gen/sim (Isaac Sim)
 ```
 
 ### Mixed (train on A100, rollout on A10)
 ```
 probenet (orchestrator, A10)
-  →  inference/openpi (A100, LAN WebSocket)
+  →  policies/openpi (A100, LAN WebSocket)
   →  episode_gen/sim (A10, localhost WebSocket)
 
 HF Hub sync daemon:
