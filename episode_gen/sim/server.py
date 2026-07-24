@@ -1,7 +1,8 @@
 """Isaac Sim data generator — WebSocket server.
 
 Runs inside an Isaac Sim SimulationApp process. Exposes a WebSocket
-interface for the probenet orchestrator to drive episode collection.
+interface for the probenet orchestrator, or drives scripted data generation
+in --record mode.
 
 Protocol:
     → {"type": "reset", "seed": 42}
@@ -92,21 +93,89 @@ class IsaacSimServer:
             self._env.close()
 
 
+def _run_record_mode(args: argparse.Namespace) -> None:
+    """Run scripted data generation and save to NPZ episodes."""
+    import gymnasium as gym
+    import torch
+
+    # Import task registrations (tasks/ is a sibling directory at runtime)
+    import tasks  # noqa: F401
+
+    from isaaclab_tasks.utils import parse_env_cfg
+
+    from tasks.oracle import PickPlaceStateMachine
+
+    logger.info("Creating env: %s", args.task)
+    env_cfg = parse_env_cfg(args.task, device=args.device, num_envs=args.num_envs)
+    env = gym.make(args.task, cfg=env_cfg).unwrapped
+
+    sm = PickPlaceStateMachine()
+    sm.setup(env)
+    env.reset()
+    sm.reset()
+
+    output_dir = Path(args.record)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    episode = 0
+    while episode < args.num_episodes:
+        observations: list[dict] = []
+        actions: list[np.ndarray] = []
+
+        while not sm.is_episode_done:
+            action = sm.get_action(env)
+            obs, _, done, _, _ = env.step(torch.tensor(action, device=env.device).unsqueeze(0))
+            observations.append(obs)
+            actions.append(action)
+            sm.advance()
+
+        success = sm.check_success(env)
+        logger.info("Episode %d done, success=%s", episode, success)
+
+        # Save episode as NPZ
+        ep_path = output_dir / f"episode_{episode:04d}.npz"
+        np.savez(
+            ep_path,
+            observations=np.array(observations, dtype=object),
+            actions=np.array(actions),
+        )
+        logger.info("Saved %s (%d steps)", ep_path, len(actions))
+
+        episode += 1
+        env.reset()
+        sm.reset()
+
+    env.close()
+    logger.info("Recorded %d episodes to %s", args.num_episodes, output_dir)
+
+
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
     parser = argparse.ArgumentParser(description="Isaac Sim data generator server")
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8226)
     parser.add_argument("--headless", action="store_true", default=True)
+    parser.add_argument("--task", default="ProbeNet-SO101-PickPlace-Prim-v0",
+                        help="Gym task ID")
+    parser.add_argument("--device", default="cuda:0", help="Device for simulation")
+    parser.add_argument("--num-envs", type=int, default=1, help="Number of parallel envs")
+    parser.add_argument("--record", type=str, default=None,
+                        help="Path to output directory for recorded episodes")
+    parser.add_argument("--num-episodes", type=int, default=50,
+                        help="Number of episodes to record (in --record mode)")
     args = parser.parse_args()
 
-    server = IsaacSimServer(host=args.host, port=args.port, headless=args.headless)
-    try:
-        asyncio.run(server.run())
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.close()
+    if args.record:
+        _run_record_mode(args)
+    else:
+        server = IsaacSimServer(host=args.host, port=args.port, headless=args.headless)
+        try:
+            asyncio.run(server.run())
+        except KeyboardInterrupt:
+            pass
+        finally:
+            server.close()
 
 
 if __name__ == "__main__":

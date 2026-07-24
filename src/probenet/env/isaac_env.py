@@ -170,7 +170,7 @@ class IsaacSO101Env:
     # ── Internal ───────────────────────────────────────────────────────────
 
     def _randomize_properties(self) -> None:
-        """Sample physical properties from the configured ranges."""
+        """Sample physical properties and apply them to USD prims."""
         self._current_properties = {}
         for spec in self._object_specs:
             props: dict[str, float] = {}
@@ -184,6 +184,22 @@ class IsaacSO101Env:
                 else:
                     props[pr.name] = np.random.uniform(pr.low, pr.high)
             self._current_properties[spec.name] = props
+
+            stage = getattr(self._env, "scene", None)
+            if stage is None:
+                continue
+            stage_obj = getattr(stage, "stage", None)
+            if stage_obj is None:
+                continue
+
+            prim = stage_obj.GetPrimAtPath(spec.usd_path)
+            if not prim or not prim.IsValid():
+                continue
+
+            if "mass" in props:
+                from pxr import UsdPhysics
+                mass_api = UsdPhysics.MassAPI.Apply(prim)
+                mass_api.GetMassAttr().Set(float(props["mass"]))
 
     def _pack_observation(self, obs_dict: dict[str, Any]) -> dict[str, Any]:
         """Pack Isaac Lab observations into a flat LeRobot-style dict."""

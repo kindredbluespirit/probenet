@@ -12,6 +12,7 @@ dependencies = [
     "websockets>=14.1",
     "scipy>=1.14.0",
     "isaacsim>=6.0.1",
+    "isaaclab[isaacsim,all]>=2.3.0",
 ]
 
 [build-system]
