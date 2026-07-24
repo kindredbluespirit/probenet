@@ -24,8 +24,8 @@ so two separate Docker targets are used:
 | `trainer` | `ghcr.io/kindredbluespirit/probenet:main-trainer` | A100 80 GB | 10 GB |
 | `rollout` | `ghcr.io/kindredbluespirit/probenet:main-rollout` | A10 24 GB | 30 GB |
 
-GR00T N1.7 (`backends/isaac-gr00t/`) requires `torch==2.9.0` and `python<3.13`, which
-conflicts with both backends. It is not currently included in the Docker images but
+GR00T N1.7 (`policies/gr00t/`) requires `torch==2.9.0` and `python<3.13`, which
+conflicts with both policy backends. It is not currently included in the Docker images but
 could be added as a third target (`:trainer-gr00t`) in the future.
 
 ## uv-managed Python (no system Python)
@@ -106,7 +106,7 @@ Images are published to `ghcr.io/kindredbluespirit/probenet`.
 Cache is read-only (`cache-from: type=gha`) — the `cache-to` line was removed
 because the default `docker` driver doesn't support cache export.
 
-Submodules are checked out recursively since `backends/openpi` is required.
+Submodules are checked out recursively since `policies/openpi` is required.
 
 ## Lambda Labs deployment
 

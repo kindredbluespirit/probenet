@@ -49,7 +49,7 @@ build-backend = "hatchling.build"
 packages = ["src/probenet"]
 
 [tool.uv.sources]
-openpi = { path = "backends/openpi", editable = true }
+openpi = { path = "policies/openpi", editable = true }
 
 [tool.ruff]
 line-length = 100

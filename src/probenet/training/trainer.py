@@ -113,7 +113,7 @@ class Trainer:
         mode = "ProbeNet" if self._config.probenet_enabled else "baseline"
         logger.info("GR00T %s training placeholder — run via GR00T CLI:", mode)
         logger.info(
-            "  uv run torchrun --nproc_per_node=1 backends/isaac-gr00t/gr00t/experiment/launch_finetune.py "
+            "  uv run torchrun --nproc_per_node=1 policies/gr00t/gr00t/experiment/launch_finetune.py "
             "--base-model-path=nvidia/GR00T-N1.7-3B "
             "--dataset-path=%s "
             "--embodiment-tag=SO101 "

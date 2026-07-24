@@ -107,7 +107,7 @@ Pattern adapted from lehome_solution's `hf_sync.py`.
 
 ```
 probenet/
-├── backends/
+├── policies/
 │   ├── openpi/              # git submodule → π₀.₅
 │   └── isaac-gr00t/         # git submodule → GR00T N1.7
 │
@@ -290,7 +290,7 @@ Real hardware (Phase 9+):
 
 | # | Phase | Key Deliverables |
 |---|---|---|
-| 1 | **Docker + backends** | Dockerfile (trainer + rollout targets), `backends/openpi/`, `backends/isaac-gr00t/`, `pyproject.toml` merged |
+| 1 | **Docker + policies** | Dockerfile (trainer + rollout targets), `policies/openpi/`, `policies/gr00t/`, `pyproject.toml` merged |
 | 2 | **Isaac Sim env** | `env/isaac_env.py` via LeIsaac, `env/lerobot_adapter.py`, verify IsaacSim version compat |
 | 3 | **Data pipeline** | Shared obs/action spec, scripted oracle data collection, LeRobotDataset export, HF Hub upload |
 | 4 | **π₀.₅ baseline** | `policies/pi05.py`, BC fine-tune, eval metrics |
@@ -363,8 +363,8 @@ All of the above (except jax/flax — not needed for collecting data)
 
 ```toml
 [tool.uv.sources]
-openpi = { path = "backends/openpi", editable = true }
-isaac-gr00t = { path = "backends/isaac-gr00t", editable = true }
+openpi = { path = "policies/openpi", editable = true }
+isaac-gr00t = { path = "policies/gr00t", editable = true }
 ```
 
 ---

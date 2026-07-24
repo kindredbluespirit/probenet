@@ -25,7 +25,7 @@ probenet/
 │
 ├── policies/                  # Policy inference servers
 │   ├── openpi/                 #   π₀.₅ server (WebSocket)
-│   │   ├── pyproject.toml      #   jax, flax, openpi (editable from backends/)
+│   │   ├── pyproject.toml      #   jax, flax, openpi (editable from policies/)
 │   │   └── serve.py            #   loads checkpoint, serves WebSocket
 │   └── gr00t/                  #   GR00T server (ZeroMQ) — future
 │       ├── pyproject.toml
@@ -39,7 +39,7 @@ probenet/
 │       ├── pyproject.toml      #   lerobot, pyserial, pyrealsense2
 │       └── server.py           #   WebSocket server + DAgger teleop mode
 │
-├── backends/                   # Git submodules (actual model repos)
+├── policies/                   # Git submodules (actual model repos + servers)
 │   ├── openpi/                 #   Physical Intelligence openpi
 │   └── isaac-gr00t/            #   NVIDIA GR00T N1.7
 │
