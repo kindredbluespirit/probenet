@@ -2561,7 +2561,7 @@ wheels = [
 [[package]]
 name = "openpi"
 version = "0.1.0"
-source = { editable = "backends/openpi" }
+source = { editable = "policies/openpi" }
 dependencies = [
     { name = "augmax" },
     { name = "beartype" },
@@ -2619,7 +2619,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.22.4,<2.0.0" },
     { name = "numpydantic", specifier = ">=1.6.6" },
     { name = "opencv-python", specifier = ">=4.10.0.84" },
-    { name = "openpi-client", editable = "backends/openpi/packages/openpi-client" },
+    { name = "openpi-client", editable = "policies/openpi/packages/openpi-client" },
     { name = "orbax-checkpoint", specifier = "==0.11.13" },
     { name = "pillow", specifier = ">=11.0.0" },
     { name = "polars", specifier = ">=1.30.0" },
@@ -2653,7 +2653,7 @@ rlds = [
 [[package]]
 name = "openpi-client"
 version = "0.1.0"
-source = { editable = "backends/openpi/packages/openpi-client" }
+source = { editable = "policies/openpi/packages/openpi-client" }
 dependencies = [
     { name = "dm-tree", version = "0.1.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
     { name = "dm-tree", version = "0.1.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
@@ -2915,7 +2915,7 @@ wheels = [
 
 [[package]]
 name = "probenet"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "." }
 dependencies = [
     { name = "huggingface-hub" },
@@ -2952,8 +2952,8 @@ requires-dist = [
     { name = "lerobot", marker = "extra == 'dev'" },
     { name = "lerobot", marker = "extra == 'training'" },
     { name = "numpy", specifier = ">=1.22.4,<2.0.0" },
-    { name = "openpi", marker = "extra == 'dev'", editable = "backends/openpi" },
-    { name = "openpi", marker = "extra == 'training'", editable = "backends/openpi" },
+    { name = "openpi", marker = "extra == 'dev'", editable = "policies/openpi" },
+    { name = "openpi", marker = "extra == 'training'", editable = "policies/openpi" },
     { name = "orbax-checkpoint", marker = "extra == 'dev'", specifier = "==0.11.13" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pyyaml", specifier = ">=6.0" },
