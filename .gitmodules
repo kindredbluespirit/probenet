@@ -1,9 +1,9 @@
 [submodule "site/themes/hugo-coder"]
 	path = site/themes/hugo-coder
 	url = https://github.com/luizdepra/hugo-coder.git
-[submodule "backends/openpi"]
-	path = backends/openpi
+[submodule "policies/openpi"]
+	path = policies/openpi
 	url = https://github.com/Physical-Intelligence/openpi.git
-[submodule "backends/isaac-gr00t"]
-	path = backends/isaac-gr00t
+[submodule "policies/gr00t"]
+	path = policies/gr00t
 	url = https://github.com/NVIDIA/Isaac-GR00T.git
